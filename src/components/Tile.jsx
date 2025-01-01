@@ -1,12 +1,38 @@
-import React from 'react'
+import React from 'react';
+import { useDispatch,useSelector } from 'react-redux';
+import { selectPiece, dropPiece, pawn_movement } from '../slices/gameSlice';
 
-function Tile({ horizontalAxis,verticalAxis,isDark, image }) {
+function Tile({ position, isDark, image }) {
+    const dispatch = useDispatch();
+    const selectedPosition = useSelector((state) => state.game.selectedPosition);
+    const selectedPiece = useSelector((state)=>state.game.piece);
+
+    function pieceMovement(selectedPiece){
+        switch (selectedPiece) {
+            case "w_pawn":
+            case "b_pawn":
+                dispatch(pawn_movement())
+                break;
+        
+            default:
+                break;
+        }
+    }
+
+    function handleClick(position) {
+        if (selectedPosition === null) {
+            dispatch(selectPiece({position}));
+        } else {
+            dispatch(dropPiece({position}));
+            pieceMovement(selectedPiece);
+        }
+    }
+
     return (
-        <div className={`w-[50px] h-[50px] ${isDark ?  "bg-green-700" : "bg-gray-200" } flex items-center justify-center `}> 
-            {/* [{horizontalAxis},{verticalAxis}]  */}
-            {image && <img src={image} alt="" />}
+        <div onClick={() => handleClick(position)} className={`w-[50px] h-[50px] ${isDark ? 'bg-green-700' : 'bg-gray-200'} flex items-center justify-center`}>
+            {image && <img src={image} alt="chess piece" className="chess-piece" />}
         </div>
-    )
+    );
 }
 
-export default Tile
+export default Tile;
