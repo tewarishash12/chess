@@ -47,8 +47,18 @@ const gameSlice = createSlice({
         },
         dropPiece: (state, { payload }) => {
             state.dropPosition = payload.position;
+            if (state.dropPosition === state.selectedPosition) {
+                state.selectedPosition= null
+                state.dropPosition= null
+                state.piece= null
+                if(state.turn==="white")
+                    state.turn="white"
+                else
+                    state.turn = "black"
+            }
         },
         pawn_movement: (state) => {
+            if(state.selectedPosition || state.dropPosition)
             if (state.piece.charAt(0) === state.turn.charAt(0)) {
                 //Flatten the board so I can easily traverse the whole board
                 const chessBoard = state.board.flat();
@@ -116,7 +126,7 @@ const gameSlice = createSlice({
                 return alert(`This is ${state.turn} turn`);
             }
         },
-        
+
     }
 });
 

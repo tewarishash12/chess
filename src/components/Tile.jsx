@@ -5,6 +5,7 @@ import { selectPiece, dropPiece, pawn_movement } from '../slices/gameSlice';
 function Tile({ position, isDark, image }) {
     const dispatch = useDispatch();
     const selectedPosition = useSelector((state) => state.game.selectedPosition);
+    const dropPosition = useSelector((state)=> state.game.dropPosition);
     const selectedPiece = useSelector((state)=>state.game.piece);
 
     function pieceMovement(selectedPiece){
@@ -24,7 +25,9 @@ function Tile({ position, isDark, image }) {
             dispatch(selectPiece({position}));
         } else {
             dispatch(dropPiece({position}));
-            pieceMovement(selectedPiece);
+            if(dropPosition)
+                console.log("Do I enter with empty dropPositon: ", dropPosition)
+                pieceMovement(selectedPiece);
         }
     }
 
