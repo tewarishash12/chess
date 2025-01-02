@@ -49,74 +49,75 @@ const gameSlice = createSlice({
             state.dropPosition = payload.position;
         },
         pawn_movement: (state) => {
-            if(state.piece.charAt(0)===state.turn.charAt(0)){
-            //Flatten the board so I can easily traverse the whole board
-            const chessBoard = state.board.flat();
-            // used to select the box where piece is present (check if the piece is actually present)
-            const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition)
-            // used to target the box where we place our piece (check if the box being targeted, is null or of opposite color)
-            const targetedSquare = chessBoard.find((box) => box.boxNotation === state.dropPosition)
+            if (state.piece.charAt(0) === state.turn.charAt(0)) {
+                //Flatten the board so I can easily traverse the whole board
+                const chessBoard = state.board.flat();
+                // used to select the box where piece is present (check if the piece is actually present)
+                const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition)
+                // used to target the box where we place our piece (check if the box being targeted, is null or of opposite color)
+                const targetedSquare = chessBoard.find((box) => box.boxNotation === state.dropPosition)
 
-            // Get the current and targeted positions
-            const current = state.selectedPosition;
-            const target = state.dropPosition;
-            // return if either of the case is not present
-            if (!selectedSquare || !targetedSquare) return;
+                // Get the current and targeted positions
+                const current = state.selectedPosition;
+                const target = state.dropPosition;
+                // return if either of the case is not present
+                if (!selectedSquare || !targetedSquare) return;
 
-            //check the piece of pawn targeted
-            const isWhite = state.piece.startsWith("w_") ? "white" : "black";
-            //set the direction of pawn movement
-            const direction = isWhite==="white" ? -1 : 1;
-            //special rows
-            const startRow = isWhite==="white" ? 'g' : 'b';
-            const promotionRow = isWhite==="white" ? 'a' : 'h';
+                //check the piece of pawn targeted
+                const isWhite = state.piece.startsWith("w_") ? "white" : "black";
+                //set the direction of pawn movement
+                const direction = isWhite === "white" ? -1 : 1;
+                //special rows
+                const startRow = isWhite === "white" ? 'g' : 'b';
+                const promotionRow = isWhite === "white" ? 'a' : 'h';
 
-            //pawn movement setup
-            const currentRow = current.charAt(0);
-            const currentColumn = current.charAt(1);
-            const targetRow = target.charAt(0);
-            const targetColumn = target.charAt(1);
-            //normal pawn movement
-            if ( (currentColumn === targetColumn) && ( targetRow.charCodeAt(0) === ( currentRow.charCodeAt(0) + direction ) ) ) {
-                console.log(isWhite)
-                if (!targetedSquare.piece) {
+                //pawn movement setup
+                const currentRow = current.charAt(0);
+                const currentColumn = current.charAt(1);
+                const targetRow = target.charAt(0);
+                const targetColumn = target.charAt(1);
+                //normal pawn movement
+                if ((currentColumn === targetColumn) && (targetRow.charCodeAt(0) === (currentRow.charCodeAt(0) + direction))) {
+                    console.log(isWhite)
+                    if (!targetedSquare.piece) {
+                        targetedSquare.piece = selectedSquare.piece;
+                        selectedSquare.piece = null;
+                        targetedSquare.img = selectedSquare.img;
+                        selectedSquare.img = null;
+                    }
+                } // for twice move in first turn
+                else if ((currentRow === startRow) && (targetColumn === currentColumn) && targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + 2 * direction) {
+                    const pathSquare = chessBoard.find((box) => box.boxNotation === String.fromCharCode(currentRow.charCodeAt(0) + direction) + currentColumn);
+                    if (!targetedSquare.piece && !pathSquare.piece) {
+                        targetedSquare.piece = selectedSquare.piece;
+                        selectedSquare.piece = null;
+                        targetedSquare.img = selectedSquare.img;
+                        selectedSquare.img = null;
+                    }
+                } // capturing piece with pawn
+                else if ((Math.abs(targetColumn - currentColumn) === 1) && (targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + direction) && (targetedSquare.piece && targetedSquare.piece.startsWith(isWhite === "white" ? "b_" : "w_"))) {
                     targetedSquare.piece = selectedSquare.piece;
                     selectedSquare.piece = null;
                     targetedSquare.img = selectedSquare.img;
                     selectedSquare.img = null;
+                } // incase the piece reaches the promotion row
+                if (targetRow === promotionRow) {
+                    targetedSquare.piece = isWhite === "white" ? "w_queen" : "b_queen";
+                    targetedSquare.img = isWhite === "white" ? w_queen : b_queen;
                 }
-            } // for twice move in first turn
-            else if ((currentRow === startRow) && (targetColumn === currentColumn) && targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + 2 * direction) {
-                const pathSquare = chessBoard.find((box) => box.boxNotation === String.fromCharCode(currentRow.charCodeAt(0) + direction) + currentColumn);
-                if (!targetedSquare.piece && !pathSquare.piece) {
-                    targetedSquare.piece = selectedSquare.piece;
-                    selectedSquare.piece = null;
-                    targetedSquare.img = selectedSquare.img;
-                    selectedSquare.img = null;
-                }
-            } // capturing piece with pawn
-            else if ((Math.abs(targetColumn - currentColumn) === 1) && (targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + direction) && (targetedSquare.piece && targetedSquare.piece.startsWith(isWhite==="white" ? "b_" : "w_"))) {
-                targetedSquare.piece = selectedSquare.piece;
-                selectedSquare.piece = null;
-                targetedSquare.img = selectedSquare.img;
-                selectedSquare.img = null;
-            } // incase the piece reaches the promotion row
-            if(targetRow===promotionRow){
-                targetedSquare.piece = isWhite==="white" ? "w_queen": "b_queen";
-                targetedSquare.img = isWhite==="white" ? w_queen : b_queen;
+                state.turn = isWhite === "white" ? "black" : "white";
+                state.selectedPosition = null;
+                state.dropPosition = null;
+                state.piece = null;
+            } else {
+                state.selectedPosition = null;
+                state.dropPosition = null;
+                state.piece = null;
+                return alert(`This is ${state.turn} turn`);
             }
-            state.turn = isWhite==="white" ? "black" : "white";
-            state.selectedPosition = null;
-            state.dropPosition = null;
-            state.piece = null;
-        } else {
-            state.selectedPosition = null;
-            state.dropPosition = null;
-            state.piece = null;
-            return alert(`This is ${state.turn} turn`);
-        }
-        }
-    },
+        },
+        
+    }
 });
 
 export const { selectPiece, dropPiece, pawn_movement } = gameSlice.actions;
