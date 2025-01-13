@@ -31,7 +31,8 @@ const gameSlice = createSlice({
         selectedPosition: null,
         dropPosition: null,
         piece: null,
-        turn: "white"
+        turn: "white",
+        possibleMoves: []
     },
     reducers: {
         selectPiece: (state, { payload }) => {
@@ -48,87 +49,193 @@ const gameSlice = createSlice({
         dropPiece: (state, { payload }) => {
             state.dropPosition = payload.position;
             if (state.dropPosition === state.selectedPosition) {
-                state.selectedPosition= null
-                state.dropPosition= null
-                state.piece= null
-                if(state.turn==="white")
-                    state.turn="white"
+                state.selectedPosition = null
+                state.dropPosition = null
+                state.piece = null
+                if (state.turn === "white")
+                    state.turn = "white"
                 else
                     state.turn = "black"
             }
         },
         pawn_movement: (state) => {
-            if(state.selectedPosition || state.dropPosition)
-            if (state.piece.charAt(0) === state.turn.charAt(0)) {
-                //Flatten the board so I can easily traverse the whole board
-                const chessBoard = state.board.flat();
-                // used to select the box where piece is present (check if the piece is actually present)
-                const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition)
-                // used to target the box where we place our piece (check if the box being targeted, is null or of opposite color)
-                const targetedSquare = chessBoard.find((box) => box.boxNotation === state.dropPosition)
+            const chessBoard = state.board.flat();
+            if (state.selectedPosition) {
+                if (state.piece.charAt(0) === state.turn.charAt(0)) {
+                    //Flatten the board so I can easily traverse the whole board
+                    // used to select the box where piece is present (check if the piece is actually present)
+                    const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition)
 
-                // Get the current and targeted positions
-                const current = state.selectedPosition;
-                const target = state.dropPosition;
-                // return if either of the case is not present
-                if (!selectedSquare || !targetedSquare) return;
+                    // return if either of the case is not present
+                    if (!selectedSquare) return;
 
-                //check the piece of pawn targeted
-                const isWhite = state.piece.startsWith("w_") ? "white" : "black";
-                //set the direction of pawn movement
-                const direction = isWhite === "white" ? -1 : 1;
-                //special rows
-                const startRow = isWhite === "white" ? 'g' : 'b';
-                const promotionRow = isWhite === "white" ? 'a' : 'h';
+                    //check the piece of pawn targeted
+                    const isWhite = state.piece.startsWith("w_") ? "white" : "black";
 
-                //pawn movement setup
-                const currentRow = current.charAt(0);
-                const currentColumn = current.charAt(1);
-                const targetRow = target.charAt(0);
-                const targetColumn = target.charAt(1);
-                //normal pawn movement
-                if ((currentColumn === targetColumn) && (targetRow.charCodeAt(0) === (currentRow.charCodeAt(0) + direction))) {
-                    console.log(isWhite)
-                    if (!targetedSquare.piece) {
-                        targetedSquare.piece = selectedSquare.piece;
-                        selectedSquare.piece = null;
-                        targetedSquare.img = selectedSquare.img;
-                        selectedSquare.img = null;
+                    if (state.piece.charAt(0) !== state.turn.charAt(0)) {
+                        state.selectedPosition = null;
+                        return alert(`This is ${state.turn}'s turn`)
                     }
-                } // for twice move in first turn
-                else if ((currentRow === startRow) && (targetColumn === currentColumn) && targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + 2 * direction) {
-                    const pathSquare = chessBoard.find((box) => box.boxNotation === String.fromCharCode(currentRow.charCodeAt(0) + direction) + currentColumn);
-                    if (!targetedSquare.piece && !pathSquare.piece) {
-                        targetedSquare.piece = selectedSquare.piece;
-                        selectedSquare.piece = null;
-                        targetedSquare.img = selectedSquare.img;
-                        selectedSquare.img = null;
+                    //set the direction of pawn movement
+                    const direction = isWhite === "white" ? -1 : 1;
+                    //special rows
+                    const startRow = isWhite === "white" ? 'g' : 'b';
+
+                    //pawn movement setup
+                    const currentRow = state.selectedPosition.charAt(0);
+                    const currentColumn = state.selectedPosition.charAt(1);
+
+                    //reset incase previous piece moves are present
+                    state.possibleMoves = [];
+
+                    // for normal pawn movement
+                    const forwardOne = String.fromCharCode(currentRow.charCodeAt(0) + direction) + currentColumn;
+                    const forwardOneSquare = chessBoard.find((tile) => tile.boxNotation === forwardOne);
+                    if (forwardOneSquare && !forwardOneSquare.piece) {
+                        state.possibleMoves.push(forwardOne)
                     }
-                } // capturing piece with pawn
-                else if ((Math.abs(targetColumn - currentColumn) === 1) && (targetRow.charCodeAt(0) === currentRow.charCodeAt(0) + direction) && (targetedSquare.piece && targetedSquare.piece.startsWith(isWhite === "white" ? "b_" : "w_"))) {
-                    targetedSquare.piece = selectedSquare.piece;
-                    selectedSquare.piece = null;
-                    targetedSquare.img = selectedSquare.img;
-                    selectedSquare.img = null;
-                } // incase the piece reaches the promotion row
-                if (targetRow === promotionRow) {
-                    targetedSquare.piece = isWhite === "white" ? "w_queen" : "b_queen";
-                    targetedSquare.img = isWhite === "white" ? w_queen : b_queen;
+                    //for two squares at first time 
+                    if (currentRow === startRow) {
+                        const forwardTwo = String.fromCharCode(currentRow.charCodeAt(0) + 2 * direction) + currentColumn;
+                        const forwardTwoSquare = chessBoard.find((tile) => tile.boxNotation === forwardTwo);
+                        if (forwardTwoSquare && !forwardTwoSquare.piece) {
+                            state.possibleMoves.push(forwardTwo)
+                        }
+                    }
+                    // capturing piece with pawn
+                    const offsets = [-1, 1];
+                    offsets.forEach((offset) => {
+                        const diagonalColumn = String.fromCharCode(currentColumn.charCodeAt(0) + offset);
+                        const diagonalTarget = String.fromCharCode(currentRow.charCodeAt(0) + direction) + diagonalColumn;
+                        const diagonalSquare = chessBoard.find((box) => box.boxNotation === diagonalTarget);
+
+                        if (diagonalSquare && diagonalSquare.piece && diagonalSquare.piece.startsWith(isWhite === "white" ? "b_" : "w_")) {
+                            state.possibleMoves.push(diagonalTarget);
+                        }
+                    });
+
+                    if (state.dropPosition) {
+                        if (state.possibleMoves.includes(state.dropPosition)) {
+                            const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition)
+                            const targetedSquare = chessBoard.find((box) => box.boxNotation === state.dropPosition)
+
+                            if (!selectedSquare || !targetedSquare) return;
+
+                            targetedSquare.piece = selectedSquare.piece;
+                            targetedSquare.img = selectedSquare.img;
+                            selectedSquare.img = null;
+                            selectedSquare.piece = null;
+
+                            const promotionRow = isWhite === "white" ? 'a' : 'h';
+
+                            if (state.dropPosition.charAt(0) === promotionRow) {
+                                targetedSquare.piece = isWhite === "white" ? "w_queen" : "b_queen";
+                                targetedSquare.img = isWhite === "white" ? w_queen : b_queen;
+                            }
+
+                            state.turn = state.turn === "white" ? "black" : "white";
+                        } else
+                            alert("Illegal move!");
+                        state.selectedPosition = null;
+                        state.dropPosition = null;
+                        state.piece = null
+                        state.possibleMoves = [];
+                    }
                 }
-                state.turn = isWhite === "white" ? "black" : "white";
-                state.selectedPosition = null;
-                state.dropPosition = null;
-                state.piece = null;
-            } else {
-                state.selectedPosition = null;
-                state.dropPosition = null;
-                state.piece = null;
-                return alert(`This is ${state.turn} turn`);
             }
         },
-
     }
 });
 
 export const { selectPiece, dropPiece, pawn_movement } = gameSlice.actions;
 export default gameSlice.reducer
+
+/* 
+pawn_movement: (state) => {
+    if (state.selectedPosition) {
+        // Flatten the board for easy traversal
+        const chessBoard = state.board.flat();
+        const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition);
+
+        if (!selectedSquare) return;
+
+        // Check if the selected piece belongs to the current player
+        const isWhite = state.piece.startsWith("w_") ? "white" : "black";
+        if (state.piece.charAt(0) !== state.turn.charAt(0)) {
+            state.selectedPosition = null;
+            return alert(`This is ${state.turn} turn`);
+        }
+
+        const direction = isWhite === "white" ? -1 : 1;
+        const startRow = isWhite === "white" ? 'g' : 'b';
+
+        const currentRow = state.selectedPosition.charAt(0);
+        const currentColumn = state.selectedPosition.charAt(1);
+
+        // Reset possible moves
+        state.possibleMoves = [];
+
+        // Single step forward
+        const forwardOne = String.fromCharCode(currentRow.charCodeAt(0) + direction) + currentColumn;
+        const forwardOneSquare = chessBoard.find((box) => box.boxNotation === forwardOne);
+        if (forwardOneSquare && !forwardOneSquare.piece) {
+            state.possibleMoves.push(forwardOne);
+        }
+
+        // Double step forward on first move
+        if (currentRow === startRow) {
+            const forwardTwo = String.fromCharCode(currentRow.charCodeAt(0) + 2 * direction) + currentColumn;
+            const forwardTwoSquare = chessBoard.find((box) => box.boxNotation === forwardTwo);
+            const pathSquare = chessBoard.find((box) => box.boxNotation === forwardOne);
+            if (forwardTwoSquare && !forwardTwoSquare.piece && !pathSquare.piece) {
+                state.possibleMoves.push(forwardTwo);
+            }
+        }
+
+        // Capture diagonally
+        for (const offset of [-1, 1]) {
+            const diagonalTarget = String.fromCharCode(currentRow.charCodeAt(0) + direction) + String.fromCharCode(currentColumn.charCodeAt(0) + offset);
+            const diagonalSquare = chessBoard.find((box) => box.boxNotation === diagonalTarget);
+            if (diagonalSquare && diagonalSquare.piece && diagonalSquare.piece.startsWith(isWhite === "white" ? "b_" : "w_")) {
+                state.possibleMoves.push(diagonalTarget);
+            }
+        }
+    }
+
+    // Validate move on dropPosition
+    if (state.dropPosition) {
+        if (state.possibleMoves.includes(state.dropPosition)) {
+            const chessBoard = state.board.flat();
+            const selectedSquare = chessBoard.find((box) => box.boxNotation === state.selectedPosition);
+            const targetedSquare = chessBoard.find((box) => box.boxNotation === state.dropPosition);
+
+            if (!selectedSquare || !targetedSquare) return;
+
+            // Move the pawn
+            targetedSquare.piece = selectedSquare.piece;
+            selectedSquare.piece = null;
+            targetedSquare.img = selectedSquare.img;
+            selectedSquare.img = null;
+
+            // Handle promotion
+            const promotionRow = isWhite === "white" ? 'a' : 'h';
+            if (state.dropPosition.charAt(0) === promotionRow) {
+                targetedSquare.piece = isWhite === "white" ? "w_queen" : "b_queen";
+                targetedSquare.img = isWhite === "white" ? w_queen : b_queen;
+            }
+
+            // Change turn
+            state.turn = isWhite === "white" ? "black" : "white";
+        } else {
+            alert("Illegal move!");
+        }
+
+        // Reset states
+        state.selectedPosition = null;
+        state.dropPosition = null;
+        state.piece = null;
+        state.possibleMoves = [];
+    }
+}
+
+*/
